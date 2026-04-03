@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import os
 import time
 import random
-import json
-from pathlib import Path
+import os
 
 # ============ PAGE CONFIGURATION ============
 st.set_page_config(
@@ -14,40 +12,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# ============ PERSISTENT LOGIN FUNCTIONS ============
-def save_login_credentials(username):
-    """Save login credentials to session storage file"""
-    try:
-        login_data = {
-            "username": username,
-            "last_login": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        with open(".healthmate_login.json", "w") as f:
-            json.dump(login_data, f)
-        return True
-    except Exception as e:
-        return False
-
-def load_saved_login():
-    """Load saved login credentials"""
-    try:
-        if Path(".healthmate_login.json").exists():
-            with open(".healthmate_login.json", "r") as f:
-                login_data = json.load(f)
-                return login_data.get("username")
-    except Exception:
-        pass
-    return None
-
-def clear_saved_login():
-    """Clear saved login credentials"""
-    try:
-        if Path(".healthmate_login.json").exists():
-            os.remove(".healthmate_login.json")
-        return True
-    except Exception:
-        return False
 
 # ============ CUSTOM CSS ============
 def load_custom_css():
@@ -410,13 +374,10 @@ def login_page():
             </div>
         """, unsafe_allow_html=True)
         
-        saved_username = load_saved_login()
-        
         with st.form("login_form", clear_on_submit=False):
             username = st.text_input(
                 "👤 Username", 
                 placeholder="Enter any username", 
-                value=saved_username if saved_username else "",
                 key="login_username"
             )
             password = st.text_input(
@@ -425,8 +386,6 @@ def login_page():
                 placeholder="Enter any password", 
                 key="login_password"
             )
-            
-            remember_me = st.checkbox("Remember me", value=True if saved_username else False)
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
@@ -440,12 +399,6 @@ def login_page():
                     st.session_state.username = username
                     st.session_state.user_name = username.title()
                     st.session_state.show_welcome = True
-                    
-                    if remember_me:
-                        save_login_credentials(username)
-                    else:
-                        clear_saved_login()
-                    
                     st.rerun()
                 else:
                     st.error("❌ Please enter both username and password!")
@@ -455,7 +408,6 @@ def login_page():
                 st.session_state.username = "guest"
                 st.session_state.user_name = "Guest"
                 st.session_state.show_welcome = True
-                clear_saved_login()
                 st.rerun()
         
         st.markdown("""
@@ -589,7 +541,6 @@ def render_sidebar(diseases_df):
         """, unsafe_allow_html=True)
         
         if st.button("🚪 Logout", use_container_width=True):
-            clear_saved_login()
             st.session_state.logged_in = False
             st.rerun()
 
@@ -650,16 +601,7 @@ def main():
     if "answers" not in st.session_state:
         st.session_state.answers = []
     
-    # Auto-login
-    if not st.session_state.logged_in:
-        saved_username = load_saved_login()
-        if saved_username:
-            st.session_state.logged_in = True
-            st.session_state.username = saved_username
-            st.session_state.user_name = saved_username.title()
-            st.session_state.show_welcome = True
-            st.rerun()
-    
+    # Check login status (no auto-login)
     if not st.session_state.logged_in:
         login_page()
         return
